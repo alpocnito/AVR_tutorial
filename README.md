@@ -7,16 +7,9 @@
 3. ```sudo apt-get install gcc-avr avr-libc avrdude``` - проследите, что бы все файлы корректно установились
 
 ## Схема
-Подкоючить atmega8535 к USBASP совсем не сложно: 
+Подключить atmega8535 к USBASP совсем не сложно. Также, подкючите светодиод на PD0. У вас должно получиться примерно такое: 
 
-![connection.png](Pictures/unnamed.gif)
-
-Учтите, что на картинке НЕ atmega8535, а atmega328 но названия ножек VCC, MOSI... у них одинаковые.
-
-USBASP:
-![usbasp.png](Pictures/1.jpg)
-
-Также, подкючите светодиод на PD0. У вас должно получиться примерно такое: 
+![usbasp.png](Pictures/22.jpg)
 ![usbasp.png](Pictures/2.jpg)
 
 ## Программирование
