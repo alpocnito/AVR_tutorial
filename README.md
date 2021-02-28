@@ -8,7 +8,7 @@
 
 ## Схема 
 
-![usbaspй.png](Pictures/22.png)
+![usbaspй.png](Pictures/32.png)
 ![usbasp.png](Pictures/2.jpg)
 
 ## Программирование
