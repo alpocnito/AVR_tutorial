@@ -8,6 +8,7 @@
 
 ## Схема
 Подкоючить atmega8535 к USBASP совсем не сложно: 
+
 ![connection.png](Pictures/unnamed.gif)
 
 Учтите, что на картинке НЕ atmega8535, а atmega328 но названия ножек VCC, MOSI... у них одинаковые.
