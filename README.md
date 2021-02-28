@@ -15,6 +15,7 @@ USBASP:
 ![usbasp.png](Pictures/1.jpg)
 
 Также, подкючите светодиод на PD0. У вас должно получиться примерно такое: 
+![usbasp.png](Pictures/2.jpg)
 
 ## Программирование
 Далее создаем main.c в репозитории проекта с таким кодом:
@@ -41,7 +42,7 @@ int main(void)
   TCCR1B |= 1<<CS11 | 1<<CS10;  //Divide by 64
   OCR1A = 15624;                //Count 15624 cycles for 1 second interrupt
   TCCR1B |= 1<<WGM12;           //Put Timer/Counter1 in CTC mode
-  TIMSK1 |= 1<<OCIE1A;          //enable timer compare interrupt
+  TIMSK |= 1<<OCIE1A;          //enable timer compare interrupt
   sei();                        //Enable global interrupts
  
                                 //Setup the I/O for the LED
@@ -53,7 +54,7 @@ int main(void)
  
 ISR(TIMER1_COMPA_vect)          //Interrupt Service Routine
 {
-  PORTD ^= (1<<0);             //Use xor to toggle the LED
+  PORTD ^= (1<<0);              //Use xor to toggle the LED
 }
 ```
 Код будет вам понятен, если вы разобрались в примере кода к Таймеру 0 в книге, написанной выше. Напишу пару комментариев.
@@ -65,12 +66,39 @@ ISR(TIMER1_COMPA_vect)          //Interrupt Service Routine
 Но сначала скомпилируем) avr-gcc - создает бинарный файл из С кода. Аналогично знакомому gcc.
 ```avr-gcc -Wall -g -Os -mmcu=atmega8535 -o main.bin main.c``` 
 
-После компиляции вы можете проверить размер программы:
+После компиляции вы можете проверить размер программы. Должно быть 136 byte.
 ``` avr-size -C main.bin```
 
 Программа, вгружающая код принимает только .hex файлы, из-за этого нам надо сначала сделать:
 ``` avr-objcopy -j .text -j .data -O ihex main.bin main.hex ```
 
-Теперь Осталос
+Теперь осталось только вгрузить код. Убедитесь, что вы подключиили программатор к компьютеру:
+``` avrdude -p atmega8535 -c usbasp -U flash:w:main.hex:i -F -P usb -B12 -v ```
 
+### Готово! Светодиод может мигать
+Если не мигает, то
+1. Проверьте подключение. Ошибка скорее всего здесь
+2. Прочитайте внимательно, что написал avrdude
+
+Также можно закинуть все это в Makefile:
+```C 
+MCU = atmega8535
+F_CPU = 1200000
+CC = avr-gcc
+OBJCOPY = avr-objcopy
+CFLAGS = -std=c99 -Wall -g -Os -mmcu=${MCU} -DF_CPU=${F_CPU} -I.
+TARGET = main
+SRCS = main.c
+
+all:
+	@${CC} ${CFLAGS} -o ${TARGET}.bin ${SRCS}
+	@${OBJCOPY} -j .text -j .data -O ihex ${TARGET}.bin ${TARGET}.hex
+
+flash:
+	@avrdude -p ${MCU} -c usbasp -U flash:w:${TARGET}.hex:i -F -P usb -B12 -v
+
+clean:
+	@rm -f *.bin *.hex
+```
+Спасибо за внимание! С вас штраф - лайк)
 
