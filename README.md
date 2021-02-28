@@ -8,6 +8,8 @@
 
 ## Схема 
 
+У светодиода длинна ножка это +, коротка это -
+
 ![usbaspй.png](Pictures/32.png)
 ![usbasp.png](Pictures/2.jpg)
 
