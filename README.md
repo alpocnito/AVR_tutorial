@@ -9,7 +9,7 @@
 ## Схема
 Подключить atmega8535 к USBASP совсем не сложно. Также, подкючите светодиод на PD0. У вас должно получиться примерно такое: 
 
-![usbasp.png](Pictures/22.jpg)
+![usbaspй.png](Pictures/22.png)
 ![usbasp.png](Pictures/2.jpg)
 
 ## Программирование
@@ -59,15 +59,19 @@ ISR(TIMER1_COMPA_vect)          //Interrupt Service Routine
 
 ## Вгружаем код!
 Но сначала скомпилируем) avr-gcc - создает бинарный файл из С кода. Аналогично знакомому gcc.
+
 ```avr-gcc -Wall -g -Os -mmcu=atmega8535 -o main.bin main.c``` 
 
 После компиляции вы можете проверить размер программы. Должно быть 136 byte.
+
 ``` avr-size -C main.bin```
 
 Программа, вгружающая код принимает только .hex файлы, из-за этого нам надо сначала сделать:
+
 ``` avr-objcopy -j .text -j .data -O ihex main.bin main.hex ```
 
 Теперь осталось только вгрузить код. Убедитесь, что вы подключиили программатор к компьютеру:
+
 ``` avrdude -p atmega8535 -c usbasp -U flash:w:main.hex:i -F -P usb -B12 -v ```
 
 ### Готово! Светодиод может мигать
