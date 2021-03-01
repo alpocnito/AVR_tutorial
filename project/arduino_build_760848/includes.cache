@@ -1,0 +1,67 @@
+[
+  {
+    "Sourcefile": null,
+    "Include": "",
+    "Includepath": "/home/mark/Downloads/arduino-1.8.13/hardware/arduino/avr/cores/arduino"
+  },
+  {
+    "Sourcefile": null,
+    "Include": "",
+    "Includepath": "/home/mark/Downloads/arduino-1.8.13/hardware/arduino/avr/variants/standard"
+  },
+  {
+    "Sourcefile": "/tmp/arduino_build_760848/sketch/sketch_feb16a.ino.cpp",
+    "Include": "SoftwareSerial.h",
+    "Includepath": "/home/mark/Downloads/arduino-1.8.13/hardware/arduino/avr/libraries/SoftwareSerial/src"
+  },
+  {
+    "Sourcefile": "/tmp/arduino_build_760848/sketch/sketch_feb16a.ino.cpp",
+    "Include": "PN532_SWHSU.h",
+    "Includepath": "/home/mark/Downloads/arduino-1.8.13/libraries/PN532_SWHSU"
+  },
+  {
+    "Sourcefile": "/tmp/arduino_build_760848/sketch/sketch_feb16a.ino.cpp",
+    "Include": "PN532Interface.h",
+    "Includepath": "/home/mark/Downloads/arduino-1.8.13/libraries/PN532"
+  },
+  {
+    "Sourcefile": "/tmp/arduino_build_760848/sketch/sketch_feb16a.ino.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/mark/Downloads/arduino-1.8.13/hardware/arduino/avr/libraries/SoftwareSerial/src/SoftwareSerial.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/mark/Downloads/arduino-1.8.13/libraries/PN532_SWHSU/PN532_SWHSU.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/mark/Downloads/arduino-1.8.13/libraries/PN532/PN532.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/mark/Downloads/arduino-1.8.13/libraries/PN532/emulatetag.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/mark/Downloads/arduino-1.8.13/libraries/PN532/llcp.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/mark/Downloads/arduino-1.8.13/libraries/PN532/mac_link.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/home/mark/Downloads/arduino-1.8.13/libraries/PN532/snep.cpp",
+    "Include": "",
+    "Includepath": null
+  }
+]
