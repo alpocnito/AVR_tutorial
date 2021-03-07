@@ -13,30 +13,35 @@ void USART_Init(void)
     UBRRH = (uint8_t)(MYUBRR >> 8);
     UBRRL = (uint8_t) MYUBRR;
     
+    uint8_t UCSRB_buf = 0;
+    uint8_t UCSRC_buf = 0;
+
     // enable receive and transmit
-    UCSRB |= (1<<RXEN)|(1<<TXEN);
+    UCSRB_buf |= (1<<RXEN)|(1<<TXEN);
     
     // disable all interruption
-    UCSRB &= ~(1<<RXCIE) & ~(1<<TXCIE) & ~(1<<UDRIE);
+    UCSRB_buf &= ~(1<<RXCIE) & ~(1<<TXCIE) & ~(1<<UDRIE);
 
     // start writing to the UCSRC
     UCSRC |= (1<<URSEL);
     
     // asynchronous mode
-    UCSRC &= ~(1<<UMSEL);
+    UCSRC_buf &= ~(1<<UMSEL);
     
     // no parite checker;
-    UCSRC &= ~(1<<UPM0) & ~(1<<UPM1);
+    UCSRC_buf &= ~(1<<UPM0) & ~(1<<UPM1);
     
     // one stop bit
-    UCSRC &= ~(1<<USBS);
+    UCSRC_buf &= ~(1<<USBS);
 
     // 8 bit character size
-    UCSRC |= (1<<UCSZ0)|(1<<UCSZ1);
-    UCSRB &= ~(1<<UCSZ2);
-
+    UCSRC_buf |= (1<<UCSZ0)|(1<<UCSZ1);
+    UCSRB_buf &= ~(1<<UCSZ2);
+  
+    UCSRB = UCSRB_buf;
+    UCSRC = UCSRC_buf;
 }
-
+/*
 int serial_available()
 {
     // waiting for unread data in receive buffer
@@ -48,7 +53,7 @@ int serial_read()
     // read buffer!
     return UDR;
 };
-
+*/
 void serial_write(uint8_t data)
 {
     // waitinng for transmit buffer
