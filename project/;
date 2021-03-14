@@ -1,0 +1,408 @@
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <avr/cpufunc.h> 
+
+#define FOSC 16000000 //Clock Speed
+#define BAUD 9600
+const uint8_t MYUBRR = FOSC / 8 / BAUD - 1;
+
+void USART_Init (void)
+{
+    // start writing to the UBBRH
+    //UCSRC &= ~(1<<URSEL);
+
+    UBRRH = (uint8_t)(MYUBRR >> 8);
+    UBRRL = (uint8_t)MYUBRR;
+
+    // enable receive and transmit
+    UCSRB = (1 << RXEN) | (1 << TXEN);
+
+    // disable all interruption
+    UCSRB &= ~(1 << RXCIE) & ~(1 << TXCIE) & ~(1 << UDRIE);
+
+    // asynchronous mode
+    UCSRC &= ~(1 << UMSEL) | (1 << URSEL);
+
+    // no parite checker;
+    UCSRC &= (~(1 << UPM0) & ~(1 << UPM1)) | (1 << URSEL);
+
+    // one stop bit
+    UCSRC &= ~(1 << USBS) | (1 << URSEL);
+    
+    // double speed mode
+    UCSRA |= (1 << U2X);
+
+    // 8 bit character size
+    UCSRC = (1 << UCSZ0) | (1 << UCSZ1) | (1 << URSEL);
+    UCSRB &= ~(1 << UCSZ2);
+}
+
+int serial_available ()
+{
+    // waiting for unread data in receive buffer
+    return (UCSRA & (1 << RXC));
+};
+int serial_read ()
+{
+    // read buffer!
+    return UDR;
+};
+
+void serial_write (uint8_t data)
+{
+    // waitinng for transmit buffer
+    while (!(UCSRA & (1 << UDRE)))
+        ;
+
+    // send data!    
+    UDR = data;
+};
+
+void serial_write_array(const uint8_t *buffer, uint8_t size)
+{
+    while (size--) {
+        serial_write(*buffer++);
+    }
+}
+void WRITE(const char* str, uint8_t size);
+//void WRITE_HEX_32(struct UINT32_T data);
+void WRITE_HEX_8(const uint8_t data);
+//void delay(uint8_t nopes);
+
+
+
+
+
+
+
+void wakeUp ()
+{
+    serial_write (0x55);
+    serial_write (0x55);
+    serial_write ((uint8_t)0);
+    serial_write ((uint8_t)0);
+    serial_write ((uint8_t)0);
+
+    while (serial_available ())
+        serial_read ();
+}
+
+
+// #define PN532_SWHSU_READ_TIMEOUT	  (1000)
+// #define PN532_TIMEOUT                 (-2)
+// #define PN532_INVALID_FRAME           (-3)
+// #define PN532_NO_SPACE                (-4)
+// #define PN532_ACK_WAIT_TIME           (10)  // ms, timeout of waiting for ACK
+
+
+#define COMMAND_GETFIRMWAREVERSION    (0x02)
+#define COMMAND_SAMCONFIGURATION      (0x14)
+#define COMMAND_INLISTPASSIVETARGET   (0x4A)
+#define PN532_HOSTTOPN532             (0xD4)
+#define PN532_POSTAMBLE               (0x00)
+#define PN532_PREAMBLE                (0x00)
+#define PN532_STARTCODE1              (0x00)
+#define PN532_STARTCODE2              (0xFF)
+#define PN532_INVALID_ACK             (-1)
+
+void receive (uint8_t* buf , int len) //Mark
+{
+    for (int read_bytes = 0; read_bytes < len; ++read_bytes)
+    {
+        uint8_t ret = 0;
+        while ((ret = serial_read ()) < 0)
+            ;
+
+        buf[read_bytes] = ret;
+    }
+}
+
+int8_t readAckFrame () //Mark
+{
+    const uint8_t PN532_ACK [] = { 0, 0, 0xFF, 0, 0xFF, 0 };
+    uint8_t size_ACK = sizeof (PN532_ACK);
+    uint8_t ackBuf[size_ACK];
+
+    receive (ackBuf , size_ACK);
+
+    int8_t out = 0;
+    for (uint8_t i = 0; i < size_ACK; ++i)
+    {
+        if (ackBuf[i] != PN532_ACK[i])
+            out = PN532_INVALID_ACK;
+    }
+
+    WRITE("START\n", 6);
+    for (uint8_t i = 0; i < size_ACK; ++i)
+    {
+        WRITE_HEX_8(i);
+        WRITE(" -> ", 4);
+        WRITE_HEX_8(ackBuf[i]);
+        WRITE(" : ", 3);
+        WRITE_HEX_8(PN532_ACK[i]);
+        WRITE("\n", 1);
+    }
+
+    return out;
+}
+
+int8_t writeCommand (const uint8_t* header , uint8_t hlen) // Mark
+{
+    while (serial_available ())
+        serial_read ();
+
+    serial_write ((uint8_t)PN532_PREAMBLE);
+    serial_write ((uint8_t)PN532_STARTCODE1);
+    serial_write ((uint8_t)PN532_STARTCODE2);
+
+    uint8_t length = hlen + 1;   // length of data field: TFI + DATA
+    serial_write (length);
+    serial_write (~length + 1);         // checksum of length
+
+    serial_write ((uint8_t)PN532_HOSTTOPN532);
+    uint8_t sum = PN532_HOSTTOPN532;    // sum of TFI + DATA
+
+    serial_write_array (header , hlen);
+    for (uint8_t i = 0; i < hlen; i++)
+        sum += header[i];
+
+    // serial_write (body , blen);
+    // for (uint8_t i = 0; i < blen; i++)
+    //     sum += body[i];
+
+    uint8_t checksum = ~sum + 1;            // checksum of TFI + DATA
+    serial_write (checksum);
+    serial_write ((uint8_t)PN532_POSTAMBLE);
+
+    return readAckFrame ();
+}
+
+uint8_t readResponse (uint8_t buf [] , uint8_t len) // Mark
+{
+    uint8_t tmp[3];
+
+    /** Frame Preamble*/
+    receive (tmp , 3);
+
+    /** receive length*/
+    uint8_t length[2];
+    receive (length , 2);
+
+    length[0] -= 2;
+
+    /** receive command byte */
+    receive (tmp , 2);
+    receive (buf , length[0]);
+
+    /** checksum and postamble */
+    receive (tmp , 2);
+
+    return length[0];
+}
+
+
+uint8_t packet_buffer[64];
+
+///////////////////////////////////////////////////////////////
+// Returns the chip's firmware version and ID
+///////////////////////////////////////////////////////////////
+
+//returns 0 if success
+uint8_t getFirmwareVersion (uint8_t response[4])
+{
+    packet_buffer[0] = COMMAND_GETFIRMWAREVERSION;
+    if (writeCommand (packet_buffer , 1))
+        return 1;
+
+    if (readResponse (packet_buffer , sizeof (packet_buffer)) < 0)
+        return 2;
+
+    response[0] = packet_buffer[0];
+    response[1] = packet_buffer[1];
+    response[2] = packet_buffer[2];
+    response[3] = packet_buffer[3];
+
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////
+// Configure board to read RFID tags
+///////////////////////////////////////////////////////////////
+uint8_t SAMConfig ()
+{
+    packet_buffer[0] = COMMAND_SAMCONFIGURATION;
+    packet_buffer[1] = 0x01; // normal mode
+    packet_buffer[2] = 0x14; // timeout: 50ms * 20 = 1 second
+    packet_buffer[3] = 0x01; // use IRQ pin
+
+    if (writeCommand (packet_buffer , 4))
+        return 0;
+
+    return (readResponse (packet_buffer , sizeof (packet_buffer)) > 0);
+}
+
+///////////////////////////////////////////////////////////////
+// Read target UID
+//
+// uid       - for uid. Up to 7 bytes
+// uidLength - for uid length
+// timeout   - number of tries before timeout
+//
+// Return 1, if all is OK; 0 otherwise
+///////////////////////////////////////////////////////////////
+uint8_t readPassiveTargetID (uint8_t cardBaudRate , uint8_t* uid , uint8_t* uidLength)
+{
+    packet_buffer[0] = COMMAND_INLISTPASSIVETARGET;
+    packet_buffer[1] = 1; // max 1 card at once
+    packet_buffer[2] = cardBaudRate;
+
+    if (writeCommand (packet_buffer , 3))
+        return 0;
+
+    if (readResponse (packet_buffer , sizeof (packet_buffer)) < 0)
+        return 0;
+
+    /* Response format:
+
+      byte            Description
+      --------------  -------------
+      b0              Tags found
+      b1              Tag Number
+      b2..3           SENS_REF
+      b4              SEL_RES
+      b5              NCFID Length
+      b6..NFCIDLen    NFCID
+    */
+
+    if (packet_buffer[0] != 1)
+        return 0;
+
+    uint16_t sens_res = packet_buffer[2];
+    sens_res <<= 8;
+    sens_res |= packet_buffer[3];
+
+    *uidLength = packet_buffer[5];
+
+    for (uint8_t i = 0; i < packet_buffer[5]; ++i)
+        uid[i] = packet_buffer[6 + i];
+
+    return 1;
+}
+
+
+
+
+
+
+
+
+
+int main ()
+{
+    cli ();
+    USART_Init ();
+    sei ();
+
+    wakeUp ();
+
+    uint8_t version_data[4] = {};
+    if (getFirmwareVersion (version_data) == 1)
+        WRITE("AAAAAAAAAAA", 11);
+    while (1)
+    {
+        WRITE("\nFound chip PN5!", 15);
+//        WRITE_HEX_8(version_data[3]);
+//        WRITE("\nFirmvare version: ", 18);
+//        WRITE_HEX_8(version_data[2]);
+//        WRITE(". ", 1);
+//        WRITE_HEX_8(version_data[1]);
+        //SAMConfig();
+//        WRITE("Waiting for an ISO14443A Card ...", 33);
+    }
+}
+
+void WRITE(const char* str, uint8_t size)
+{
+    serial_write_array((const uint8_t*)str, size);
+}
+// void WRITE_HEX_32(struct UINT32_T data)
+// {
+	
+// 	uint8_t mask = 0xf0;
+// 	uint8_t res = (data.b2 & mask);
+// 	res = res >> 4;
+// 	if (res < 10)
+// 	res += '0';
+// 	else
+// 	res += 'A' - 10;
+// 	serial_write(res);
+	
+//     mask = 0xf;
+// 	res  = (data.b2 & mask);
+// 	if (res < 10)
+// 		res += '0';
+// 	else
+// 		res += 'A' - 10;
+// 	serial_write(res);
+	
+// 	/*//int zero = 1;
+//     for (int i = 7; i >= 0; --i)
+//     {
+//         uint32_t mask = 0xf << (4 * i);
+//         uint32_t res = (data & mask) >> (4 * i);
+
+
+//         // if (zero && res == 0)
+//         //     continue;
+//         // zero = 0;
+
+//         if (res < 10)
+//             res += '0';
+//         else
+//             res += 'A' - 10;
+        
+//         serial_write(res);
+//     }*/
+    
+//     // if (zero)
+//     //     serial_write(0);
+// }
+void WRITE_HEX_8(const uint8_t data)
+{
+    uint8_t out = data;
+    if (out < 10)
+        out += '0';
+    else
+        out += 'A' - 10;
+        
+    serial_write(out);
+}
+
+// void delay(uint8_t nopes)
+// {
+//     //divide 1000 - ms
+//     uint32_t count = nopes * FOSC / 1000;
+//     for (uint32_t i = 0; i < count; ++i)
+//         asm volatile("nop");
+// }
+
+// if (serial_available ())
+// {
+    // uint8_t data = serial_read ();
+    // serial_write (((data & 0b00000001) >> 0) + '0');
+    // serial_write (((data & 0b00000010) >> 1) + '0');
+    // serial_write (((data & 0b00000100) >> 2) + '0');
+    // serial_write (((data & 0b00001000) >> 3) + '0');
+    // serial_write (((data & 0b00010000) >> 4) + '0');
+    // serial_write (((data & 0b00100000) >> 5) + '0');
+    // serial_write (((data & 0b01000000) >> 6) + '0');
+    // serial_write (((data & 0b10000000) >> 7) + '0');
+    // serial_write (data);
+    // res = data & (0b00001111) 
+    // if (res < 9)
+    //     ;res += '0''
+    // else
+    //     res += 'A'; 
+
+    // serial_write ('\n');
+// }
